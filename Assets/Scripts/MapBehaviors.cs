@@ -5,15 +5,18 @@ using UnityEngine.Tilemaps;
 using System.IO;
 using TMPro;
 using static Unity.Burst.Intrinsics.X86.Avx;
+using UnityEngine.UIElements;
+using UnityEngine.WSA;
 
 public class MapBehaviors : MonoBehaviour
 {
     // tilemap & tile variables
     public Tilemap myTilemap;
-    public Tile _wall;
-    public Tile _door;
-    public Tile _chest;
-    public Tile _enemy;
+    public TileBase _wall;
+    public TileBase _door;
+    public TileBase _chest;
+    public TileBase _enemy;
+    public TileBase _none;
 
     public int[,] myMap = new int[20, 20];   
 
@@ -22,7 +25,7 @@ public class MapBehaviors : MonoBehaviour
     public char door = 'O';
     public char chest = '*';
     public char enemy = '@';
-    static char empty = ' ';
+    static char none = ' ';
 
     // collision variables
     bool canWalk;
@@ -34,6 +37,7 @@ public class MapBehaviors : MonoBehaviour
     {
         LoadPremadeMap();
         GenerateMapString();
+        ConvertMapToTilemap();
     }
 
     void Update()
@@ -62,11 +66,11 @@ public class MapBehaviors : MonoBehaviour
                     tmp.text += wall;
                     Debug.Log("set char wall");
                 }
-                if (x >=5 && y >= 5 && x <= 15 && y <= 15)
+                if (x > 20 && y > 20 && x < 0 && y < 0)
                 {
                     // set char empty
-                    tmp.text += empty;
-                    Debug.Log("set char empty");
+                    tmp.text += none;
+                    Debug.Log("set char none");
                 }
                 if (myMap[x, y] == 1)
                 {
@@ -129,12 +133,37 @@ public class MapBehaviors : MonoBehaviour
     }
 
     // Converts a map string into Unity Tilemap
-    string ConvertMapToTilemap(string mapData)
+    string ConvertMapToTilemap()
     {
-        //if (char wall){
-        //  Tile _wall = myMap.GetTile(#);
-        //}
-        return (" ");
+        //GenerateMapString();
+        var mapData = " ";
+
+        if (tmp.text == " ")
+        {
+            myTilemap.SetTile(new Vector3Int(0, 0, 0), _none);
+            Debug.Log("Set tile to _none");
+        }
+        if (tmp.text == "#")
+        {
+            myTilemap.SetTile(new Vector3Int(0, 0, 0), _wall);
+            Debug.Log("Set tile to _wall");
+        }
+        if (tmp.text == "O")
+        {
+            myTilemap.SetTile(new Vector3Int(0, 0, 0), _door);
+            Debug.Log("Set tile to _door");
+        }
+        if (tmp.text == "*")
+        {
+            myTilemap.SetTile(new Vector3Int(0, 0, 0), _chest);
+            Debug.Log("Set tile to _chest");
+        }
+        if (tmp.text == "@")
+        {
+            myTilemap.SetTile(new Vector3Int(0, 0, 0), _enemy);
+            Debug.Log("Set tile to _enemy");
+        }
+        return ($"mapData");
     }
 
     // Loads a pre-made map from a text asset

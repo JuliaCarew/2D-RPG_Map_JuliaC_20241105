@@ -260,6 +260,7 @@ MonoBehaviour:
   _door: {fileID: 11400000, guid: 5fb8cf1f7a130f4468e2da89359ecf96, type: 2}
   _chest: {fileID: 11400000, guid: 716da1dfd4e09e448ab44f1b77312253, type: 2}
   _enemy: {fileID: 11400000, guid: 7bb0fa598c4da34449503949bf5f0796, type: 2}
+  _none: {fileID: 11400000, guid: 4e196fed21317a844923d52fd5cf3e12, type: 2}
   wall: 35
   door: 48
   chest: 42
