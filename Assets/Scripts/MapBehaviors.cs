@@ -122,7 +122,7 @@ public class MapBehaviors : MonoBehaviour
                 int neighborX = x + check_x;
                 int neighborY = y + check_y;
 
-                if (neighborX >= 0 && neighborX < 20 && neighborY >= 0 && neighborY < 20)
+                if (neighborX >= 0 && neighborX < 15 && neighborY >= 0 && neighborY < 15)
                 {
                     if (map[neighborX, neighborY] == tileType)
                     {
@@ -142,7 +142,7 @@ public class MapBehaviors : MonoBehaviour
         // Walls must be on the borders of the map array
         if (myMap[x, y] == 0)
         {
-            if (x == 0 || x == 19 || y == 0 || y == 19)
+            if (x == 0 || x == 16 || y == 0 || y == 16)
             {
                 // Wall is allowed on the border
                 wallPositions.Add(currentPos);
