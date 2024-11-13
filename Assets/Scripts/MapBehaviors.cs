@@ -4,9 +4,7 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 using System.IO;
 using TMPro;
-using static Unity.Burst.Intrinsics.X86.Avx;
-using UnityEngine.UIElements;
-//using UnityEngine.WSA;
+using Random = UnityEngine.Random;
 
 public class MapBehaviors : MonoBehaviour
 {
@@ -38,7 +36,8 @@ public class MapBehaviors : MonoBehaviour
 
     // map grid (20X20)
     int[,] myMap = new int[15, 15];
-
+    public int width = 15;
+    public int height = 15;
 
     // collision variables
     bool canWalk;
@@ -51,7 +50,7 @@ public class MapBehaviors : MonoBehaviour
         //LoadPremadeMap();
         ConvertMapToTilemap();
     }
-
+    
     // Returns a string representation of a randomly generated map
     // USED IN: ConvertMapToTilemap()
     string GenerateMapString()
@@ -66,51 +65,46 @@ public class MapBehaviors : MonoBehaviour
         string none = " ";
 
         // set up multidimensional array for tilemap to be generated
-        for (int y = 0; y < 15; y++)
+        for (int y = 0; y < width; y++)
         {
-            for (int x = 0; x < 15; x++)
-            {              
+            for (int x = 0; x < height; x++)
+            {
                 // randomly assign tiles
                 // (0 - wall, 1 - door, 2 - chest, 3 - enemy, 4 - none)
                 myMap[x, y] = Random.Range(0, 5);
 
                 Debug.Log($"Current tile: ({x}, {y})");
 
-                // applying tile rules 
                 TileRules(x, y);
 
                 // place tiles around the border
-                if (myMap[x, y] == wall_number)
+                if (x == 0 || x == width - 1 || y == 0 || y == height - 1)
                 {
-                    // set char wall
                     mapStringResult += wall;
                     Debug.Log("generate wall");
                 }
                 if (myMap[x, y] == door_number)
                 {
-                    // set char door
                     mapStringResult += door;
                     Debug.Log("generate door");
                 }
                 if (myMap[x, y] == chest_number)
                 {
-                    // set char chest
                     mapStringResult += chest;
                     Debug.Log("generate chest");
                 }
                 if (myMap[x, y] == enemy_number)
                 {
-                    // set char enemy
                     mapStringResult += enemy;
                     Debug.Log("generate enemy");
                 }
                 if (myMap[x, y] == none_number)
                 {
-                    // set char none
                     mapStringResult += none;
                     Debug.Log("generate none");
                 }
             }
+            //mapStringResult += "\n";
         }
         return mapStringResult;
         // need to adjust range so
@@ -123,9 +117,9 @@ public class MapBehaviors : MonoBehaviour
     {
         // check the surrounding 8 tiles to be used in TileRules(),
         // distance is whatever's specified in that rule below
-        for (int check_x = -distance; check_x < distance; check_x++)
+        for (int check_x = -distance; check_x <= distance; check_x++)
         {
-            for (int check_y = -distance; check_y < distance; check_y++)
+            for (int check_y = -distance; check_y <= distance; check_y++)
             {   // don't count current tile
                 if (check_x == 0 && check_y == 0)
                 {
@@ -134,7 +128,7 @@ public class MapBehaviors : MonoBehaviour
                 int neighborX = x + check_x;
                 int neighborY = y + check_y;
 
-                if (neighborX >= 0 && neighborX < 15 && neighborY >= 0 && neighborY < 15)
+                if (neighborX >= 0 && neighborX < width && neighborY >= 0 && neighborY < height)
                 {
                     if (map[neighborX, neighborY] == tileType)
                     {
@@ -155,9 +149,10 @@ public class MapBehaviors : MonoBehaviour
         // Walls must be on the borders of the map array
         if (myMap[x, y] == wall_number)
         {
-            if (x == 0 || x == 15 || y == 0 || y == 15)
+            if (x == 0 || x == width - 1 || y == 0 || y == height - 1)
             {
                 // Wall is allowed on the border
+                myMap[x, y] = wall_number;
                 wallPositions.Add(currentPos);
                 Debug.Log($"Placed wall at the border ({x}, {y})");
             }
@@ -261,41 +256,39 @@ public class MapBehaviors : MonoBehaviour
     string ConvertMapToTilemap()
     {
         string mapData = GenerateMapString();
-        int width = 15;
-        int height = 15;
 
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                int index = x + y * width;
+                int index = x + (height - y - 1) * width;
                 char currentChar = mapData[index];
 
                 // checking for assigned chars and replacing with assigned tiles              
                 if (currentChar == '#')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _wall);
-                    //Debug.Log($"Set tile to _wall at ({x}, {y})");
+                    Debug.Log($"Set tile to _wall at ({x}, {y})");
                 }
                 if (currentChar == 'O')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _door);
-                    //Debug.Log($"Set tile to _door at ({x}, {y})");
+                    Debug.Log($"Set tile to _door at ({x}, {y})");
                 }
                 if (currentChar == '*')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _chest);
-                    //Debug.Log($"Set tile to _chest at ({x}, {y})");
+                    Debug.Log($"Set tile to _chest at ({x}, {y})");
                 }
                 if (currentChar == '@')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _enemy);
-                    //Debug.Log($"Set tile to _enemy at ({x}, {y})");
+                    Debug.Log($"Set tile to _enemy at ({x}, {y})");
                 }
                 if (currentChar == ' ')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _none);
-                    //Debug.Log($"Set tile to _none at ({x}, {y})");
+                    Debug.Log($"Set tile to _none at ({x}, {y})");
                 }
             }
         }
