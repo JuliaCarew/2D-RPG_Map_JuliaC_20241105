@@ -40,10 +40,18 @@ public class MapBehaviors : MonoBehaviour
     public TextMeshProUGUI tmp;   
 
     void Start()
-    {      
+    {
         //LoadPremadeMap();
         ConvertMapToTilemap();
     }
+   /* void Update()
+    {
+        if (Input.GetKeyDown("space"))
+        {
+            ConvertMapToTilemap();
+            Debug.Log("Map Created");
+        }
+    }*/
 
     // Returns a string representation of a randomly generated map
     // USED IN: ConvertMapToTilemap()
@@ -63,7 +71,8 @@ public class MapBehaviors : MonoBehaviour
         {
             for (int y = 0; y < 15; y++)
             {
-                // randomly assign tiles (0 - wall, 1 - door, 2 - chest, 3 - enemy)
+                // randomly assign tiles
+                // (0 - wall, 1 - door, 2 - chest, 3 - enemy, 4 - none)
                 myMap[x, y] = Random.Range(0, 5);
 
                 // applying tile rules 
@@ -95,7 +104,7 @@ public class MapBehaviors : MonoBehaviour
                 }
                 if (myMap[x, y] == 4)
                 {
-                    // set char enemy
+                    // set char none
                     mapStringResult += none;
                     Debug.Log("generate none");
                 }
@@ -103,14 +112,15 @@ public class MapBehaviors : MonoBehaviour
         }
         return mapStringResult;
         // need to adjust range so
-        // writing to the walls and not everywhere in between
+        // writing to the walls and not everywhere in between (made into wall rule)
     }
 
     // vars in the method represent myMap, x,y co-ords, tile checking, and tile the rule is distancing from
     // USED IN: TileRules()
     bool CheckNeighbors(int[,] map, int x, int y, int tileType, int distance)
     {
-        // check the surrounding 8 tiles to be used in TileRules()      
+        // check the surrounding 8 tiles to be used in TileRules(),
+        // distance is whatever's specified in that rule below
         for (int check_x = -distance; check_x < distance; check_x++)
         {
             for (int check_y = -distance; check_y < distance; check_y++)
@@ -137,6 +147,7 @@ public class MapBehaviors : MonoBehaviour
     // USED IN: GenerateMapString()
     void TileRules(int x, int y)
     {
+        // is double nested for loop needed (to reference the map) ??
         Vector2Int currentPos = new Vector2Int(x, y);
         //  !!  WALLS   !! //
         // Walls must be on the borders of the map array
@@ -156,7 +167,7 @@ public class MapBehaviors : MonoBehaviour
         }
         //  !!  DOORS   !! //
         // Doors always need to be within 1 tile of walls and there only one
-        if (doorCount < 1 && myMap[x, y] == 1)
+        if (doorCount < 2 && myMap[x, y] == 1)
         {
             bool nextToWall = CheckNeighbors(myMap, x, y, 0, 1); // 0 - wall / 1 - distance
 
@@ -174,7 +185,7 @@ public class MapBehaviors : MonoBehaviour
         }
         //  !!  CHESTS   !! //
         // Chests must be at least 2 tiles away from doors, and within 1 tile of a wall 
-        if (chestCount < 2 && myMap[x, y] == 2)
+        if (chestCount < 3 && myMap[x, y] == 2)
         {
             bool nextToWall = CheckNeighbors(myMap, x, y, 0, 1);   // 0 - wall / 1 - distance
             bool farFromDoor = !CheckNeighbors(myMap, x, y, 1, 2); // 1 - door / 2 - distance
@@ -192,13 +203,13 @@ public class MapBehaviors : MonoBehaviour
             }
         }
         //  !!  ENEMIES   !! //
-        // Enemies need to be 2 tiles away from nearest occupied tile of any kind 
-        if (enemyCount < 3 && myMap[x, y] == 3)
+        // Enemies need to be 1 tile away from nearest occupied tile of any kind 
+        if (enemyCount < 4 && myMap[x, y] == 3)
         {
-            bool farFromOccupied = !CheckNeighbors(myMap, x, y, 0, 2) && // 0 - wall / 2 - distance
-                                   !CheckNeighbors(myMap, x, y, 1, 2) && // 1 - door / 2 - distance
-                                   !CheckNeighbors(myMap, x, y, 2, 2) && // 2 - chest / 2 - distance
-                                   !CheckNeighbors(myMap, x, y, 3, 2);   // 3 - enemy / 2 - distance
+            bool farFromOccupied = !CheckNeighbors(myMap, x, y, 0, 1) && // 0 - wall / 2 - distance
+                                   !CheckNeighbors(myMap, x, y, 1, 1) && // 1 - door / 2 - distance
+                                   !CheckNeighbors(myMap, x, y, 2, 1) && // 2 - chest / 2 - distance
+                                   !CheckNeighbors(myMap, x, y, 3, 1);   // 3 - enemy / 2 - distance
 
             if (farFromOccupied)
             {
@@ -211,6 +222,12 @@ public class MapBehaviors : MonoBehaviour
                 myMap[x, y] = 4;  // Place an empty space if rule not met
                 Debug.Log($"ERROR - Replaced enemy with none at {x}, {y}");
             }
+        }
+        // LIMIT REACHED //
+        if (doorCount >= 2 || chestCount >= 3 || enemyCount >= 4)
+        {
+            myMap[x, y] = 4;  // Place an empty space if limit reached !! wall limit needed !!
+            Debug.Log($"LIMIT REACHED - Replaced with none at {x}, {y}");
         }
         // wall positions
         if (myMap[x, y] == 0)
