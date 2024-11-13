@@ -6,7 +6,7 @@ using System.IO;
 using TMPro;
 using static Unity.Burst.Intrinsics.X86.Avx;
 using UnityEngine.UIElements;
-using UnityEngine.WSA;
+//using UnityEngine.WSA;
 
 public class MapBehaviors : MonoBehaviour
 {
@@ -22,6 +22,13 @@ public class MapBehaviors : MonoBehaviour
     private int doorCount = 0;
     private int chestCount = 0;
     private int enemyCount = 0;
+
+    // tiles assigned values in string
+    int none_number = 0;
+    int wall_number = 1;
+    int door_number = 2;
+    int chest_number = 3;
+    int enemy_number = 4;
 
     // positions of tiles (to be used in TileRules & CheckNeighbors)
     private List<Vector2Int> doorPositions = new List<Vector2Int>();
@@ -44,14 +51,6 @@ public class MapBehaviors : MonoBehaviour
         //LoadPremadeMap();
         ConvertMapToTilemap();
     }
-   /* void Update()
-    {
-        if (Input.GetKeyDown("space"))
-        {
-            ConvertMapToTilemap();
-            Debug.Log("Map Created");
-        }
-    }*/
 
     // Returns a string representation of a randomly generated map
     // USED IN: ConvertMapToTilemap()
@@ -67,42 +66,45 @@ public class MapBehaviors : MonoBehaviour
         string none = " ";
 
         // set up multidimensional array for tilemap to be generated
-        for (int x = 0; x < 15; x++)
+        for (int y = 0; y < 15; y++)
         {
-            for (int y = 0; y < 15; y++)
-            {
+            for (int x = 0; x < 15; x++)
+            {              
                 // randomly assign tiles
                 // (0 - wall, 1 - door, 2 - chest, 3 - enemy, 4 - none)
                 myMap[x, y] = Random.Range(0, 5);
 
+                Debug.Log($"Current tile: ({x}, {y})");
+
                 // applying tile rules 
                 TileRules(x, y);
 
-                if (myMap[x, y] == 0)
+                // place tiles around the border
+                if (myMap[x, y] == wall_number)
                 {
                     // set char wall
                     mapStringResult += wall;
                     Debug.Log("generate wall");
                 }
-                if (myMap[x, y] == 1)
+                if (myMap[x, y] == door_number)
                 {
                     // set char door
                     mapStringResult += door;
                     Debug.Log("generate door");
                 }
-                if (myMap[x, y] == 2)
+                if (myMap[x, y] == chest_number)
                 {
                     // set char chest
                     mapStringResult += chest;
                     Debug.Log("generate chest");
                 }
-                if (myMap[x, y] == 3)
+                if (myMap[x, y] == enemy_number)
                 {
                     // set char enemy
                     mapStringResult += enemy;
                     Debug.Log("generate enemy");
                 }
-                if (myMap[x, y] == 4)
+                if (myMap[x, y] == none_number)
                 {
                     // set char none
                     mapStringResult += none;
@@ -145,15 +147,15 @@ public class MapBehaviors : MonoBehaviour
     }
     // Creates placement rules & maximum placements depending on the tile
     // USED IN: GenerateMapString()
-    void TileRules(int x, int y)
+    void WallRules(int x, int y)
     {
-        // is double nested for loop needed (to reference the map) ??
         Vector2Int currentPos = new Vector2Int(x, y);
+
         //  !!  WALLS   !! //
         // Walls must be on the borders of the map array
-        if (myMap[x, y] == 0)
+        if (myMap[x, y] == wall_number)
         {
-            if (x == 0 || x == 16 || y == 0 || y == 16)
+            if (x == 0 || x == 15 || y == 0 || y == 15)
             {
                 // Wall is allowed on the border
                 wallPositions.Add(currentPos);
@@ -161,15 +163,20 @@ public class MapBehaviors : MonoBehaviour
             }
             else
             {
-                myMap[x, y] = 4;  // 4 for empty space
+                myMap[x, y] = none_number;  
                 Debug.Log($"Removed wall from non-border position ({x}, {y})");
             }
         }
+    }
+    void DoorRules(int x, int y)
+    {
+        Vector2Int currentPos = new Vector2Int(x, y);
+
         //  !!  DOORS   !! //
         // Doors always need to be within 1 tile of walls and there only one
-        if (doorCount < 2 && myMap[x, y] == 1)
+        if (doorCount < 2 && myMap[x, y] == door_number)
         {
-            bool nextToWall = CheckNeighbors(myMap, x, y, 0, 1); // 0 - wall / 1 - distance
+            bool nextToWall = CheckNeighbors(myMap, x, y, wall_number, 1); // 1 - distance
 
             if (nextToWall)
             {
@@ -179,16 +186,21 @@ public class MapBehaviors : MonoBehaviour
             }
             else
             {
-                myMap[x, y] = 4;  // Place an empty space if rule not met
+                myMap[x, y] = none_number;  // Place an empty space if rule not met
                 Debug.Log($"ERROR - Replaced door with none at {x}, {y}");
             }
         }
+    }
+    void ChestRules(int x, int y)
+    {
+        Vector2Int currentPos = new Vector2Int(x, y);
+
         //  !!  CHESTS   !! //
         // Chests must be at least 2 tiles away from doors, and within 1 tile of a wall 
-        if (chestCount < 3 && myMap[x, y] == 2)
+        if (chestCount < 3 && myMap[x, y] == chest_number)
         {
-            bool nextToWall = CheckNeighbors(myMap, x, y, 0, 1);   // 0 - wall / 1 - distance
-            bool farFromDoor = !CheckNeighbors(myMap, x, y, 1, 2); // 1 - door / 2 - distance
+            bool nextToWall = CheckNeighbors(myMap, x, y, wall_number, 1);   // 1 - distance
+            bool farFromDoor = !CheckNeighbors(myMap, x, y, door_number, 2); // 2 - distance
 
             if (nextToWall && farFromDoor)
             {
@@ -198,19 +210,23 @@ public class MapBehaviors : MonoBehaviour
             }
             else
             {
-                myMap[x, y] = 4;  // Place an empty space if rule not met
+                myMap[x, y] = none_number;  // Place an empty space if rule not met
                 Debug.Log($"ERROR - Replaced chest with none at {x}, {y}");
             }
         }
+    }
+    void EnemyRules(int x, int y)
+    {
+        Vector2Int currentPos = new Vector2Int(x, y);
+
         //  !!  ENEMIES   !! //
         // Enemies need to be 1 tile away from nearest occupied tile of any kind 
-        if (enemyCount < 4 && myMap[x, y] == 3)
+        if (enemyCount < 4 && myMap[x, y] == enemy_number)
         {
-            bool farFromOccupied = !CheckNeighbors(myMap, x, y, 0, 1) && // 0 - wall / 2 - distance
-                                   !CheckNeighbors(myMap, x, y, 1, 1) && // 1 - door / 2 - distance
-                                   !CheckNeighbors(myMap, x, y, 2, 1) && // 2 - chest / 2 - distance
-                                   !CheckNeighbors(myMap, x, y, 3, 1);   // 3 - enemy / 2 - distance
-
+            bool farFromOccupied = !CheckNeighbors(myMap, x, y, wall_number, 1) && // 2 - distance
+                                   !CheckNeighbors(myMap, x, y, door_number, 1) && // 2 - distance
+                                   !CheckNeighbors(myMap, x, y, chest_number, 1) && //2 - distance
+                                   !CheckNeighbors(myMap, x, y, enemy_number, 1);   // 2 - distance
             if (farFromOccupied)
             {
                 enemyCount++;
@@ -219,22 +235,25 @@ public class MapBehaviors : MonoBehaviour
             }
             else
             {
-                myMap[x, y] = 4;  // Place an empty space if rule not met
+                myMap[x, y] = none_number;  // Place an empty space if rule not met
                 Debug.Log($"ERROR - Replaced enemy with none at {x}, {y}");
             }
         }
+    }
+    void TileRules(int x, int y)
+    {
+        Vector2Int currentPos = new Vector2Int(x, y);
+        WallRules(x, y);
+        DoorRules(x, y);
+        ChestRules(x, y);
+        EnemyRules(x, y);
+
         // LIMIT REACHED //
         if (doorCount >= 2 || chestCount >= 3 || enemyCount >= 4)
         {
-            myMap[x, y] = 4;  // Place an empty space if limit reached !! wall limit needed !!
+            myMap[x, y] = none_number;  // Place an empty space if limit reached !! wall limit needed !!
             Debug.Log($"LIMIT REACHED - Replaced with none at {x}, {y}");
-        }
-        // wall positions
-        if (myMap[x, y] == 0)
-        {
-            wallPositions.Add(currentPos);
-            Debug.Log($"Placed wall at {x}, {y}");
-        }
+        }  
     }
 
     // Converts a map string into Tilemap using assigned public variables with _
@@ -256,27 +275,27 @@ public class MapBehaviors : MonoBehaviour
                 if (currentChar == '#')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _wall);
-                    Debug.Log($"Set tile to _wall at ({x}, {y})");
+                    //Debug.Log($"Set tile to _wall at ({x}, {y})");
                 }
                 if (currentChar == 'O')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _door);
-                    Debug.Log($"Set tile to _door at ({x}, {y})");
+                    //Debug.Log($"Set tile to _door at ({x}, {y})");
                 }
                 if (currentChar == '*')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _chest);
-                    Debug.Log($"Set tile to _chest at ({x}, {y})");
+                    //Debug.Log($"Set tile to _chest at ({x}, {y})");
                 }
                 if (currentChar == '@')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _enemy);
-                    Debug.Log($"Set tile to _enemy at ({x}, {y})");
+                    //Debug.Log($"Set tile to _enemy at ({x}, {y})");
                 }
                 if (currentChar == ' ')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _none);
-                    Debug.Log($"Set tile to _none at ({x}, {y})");
+                    //Debug.Log($"Set tile to _none at ({x}, {y})");
                 }
             }
         }
@@ -286,6 +305,18 @@ public class MapBehaviors : MonoBehaviour
     string LoadPremadeMap()
     {
         Debug.Log("reading text file");
+        string pathToFile = ($"{Application.dataPath}/2DMapStrings/TestMap.txt");
+        string[] myLines = System.IO.File.ReadAllLines(pathToFile);
+
+        for (int y = 0; y < myLines.Length; y++)
+        {
+            string myLine = myLines[y];
+            for (int x = 0; x < myLine.Length; x++)
+            {
+                char myChar = myLine[x];
+                //if (x < myArray)
+            }
+        }
 
         tmp.text = "";
         //var premadeMapResult;

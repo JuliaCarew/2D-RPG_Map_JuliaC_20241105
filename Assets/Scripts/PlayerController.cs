@@ -36,13 +36,13 @@ public class PlayerController : MonoBehaviour
             {
                 // Move horizontally, snapping to the grid
                 movePoint.position += new Vector3(Input.GetAxisRaw("Horizontal") * tileSize, 0f, 0f);
-                Debug.Log("moving horizontally");
+                //Debug.Log("moving horizontally");
             }
             if (Mathf.Abs(Input.GetAxisRaw("Vertical")) == 1f)
             {
                 // Move vertically, snapping to the grid
                 movePoint.position += new Vector3(0f, Input.GetAxisRaw("Vertical") * tileSize, 0f);
-                Debug.Log("moving vertically");
+                //Debug.Log("moving vertically");
             }
         }
     }
