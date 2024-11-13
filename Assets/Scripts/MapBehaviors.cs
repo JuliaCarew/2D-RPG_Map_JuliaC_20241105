@@ -64,7 +64,7 @@ public class MapBehaviors : MonoBehaviour
             for (int y = 0; y < 15; y++)
             {
                 // randomly assign tiles (0 - wall, 1 - door, 2 - chest, 3 - enemy)
-                myMap[x, y] = Random.Range(0, 4);
+                myMap[x, y] = Random.Range(0, 5);
 
                 // applying tile rules 
                 TileRules(x, y);
@@ -92,7 +92,13 @@ public class MapBehaviors : MonoBehaviour
                     // set char enemy
                     mapStringResult += enemy;
                     Debug.Log("generate enemy");
-                }               
+                }
+                if (myMap[x, y] == 4)
+                {
+                    // set char enemy
+                    mapStringResult += none;
+                    Debug.Log("generate none");
+                }
             }
         }
         return mapStringResult;
@@ -132,7 +138,22 @@ public class MapBehaviors : MonoBehaviour
     void TileRules(int x, int y)
     {
         Vector2Int currentPos = new Vector2Int(x, y);
-
+        //  !!  WALLS   !! //
+        // Walls must be on the borders of the map array
+        if (myMap[x, y] == 0)
+        {
+            if (x == 0 || x == 19 || y == 0 || y == 19)
+            {
+                // Wall is allowed on the border
+                wallPositions.Add(currentPos);
+                Debug.Log($"Placed wall at the border ({x}, {y})");
+            }
+            else
+            {
+                myMap[x, y] = 4;  // 4 for empty space
+                Debug.Log($"Removed wall from non-border position ({x}, {y})");
+            }
+        }
         //  !!  DOORS   !! //
         // Doors always need to be within 1 tile of walls and there only one
         if (doorCount < 1 && myMap[x, y] == 1)
@@ -147,8 +168,8 @@ public class MapBehaviors : MonoBehaviour
             }
             else
             {
-                myMap[x, y] = 0;  // Place a wall if rule not met
-                Debug.Log($"ERROR - Replaced door with wall at {x}, {y}");
+                myMap[x, y] = 4;  // Place an empty space if rule not met
+                Debug.Log($"ERROR - Replaced door with none at {x}, {y}");
             }
         }
         //  !!  CHESTS   !! //
@@ -166,8 +187,8 @@ public class MapBehaviors : MonoBehaviour
             }
             else
             {
-                myMap[x, y] = 0;  // Place a wall if rule not met
-                Debug.Log($"ERROR - Replaced chest with wall at {x}, {y}");
+                myMap[x, y] = 4;  // Place an empty space if rule not met
+                Debug.Log($"ERROR - Replaced chest with none at {x}, {y}");
             }
         }
         //  !!  ENEMIES   !! //
@@ -187,8 +208,8 @@ public class MapBehaviors : MonoBehaviour
             }
             else
             {
-                myMap[x, y] = 0;  // Place a wall if rule not met
-                Debug.Log($"ERROR - Replaced enemy with wall at {x}, {y}");
+                myMap[x, y] = 4;  // Place an empty space if rule not met
+                Debug.Log($"ERROR - Replaced enemy with none at {x}, {y}");
             }
         }
         // wall positions
@@ -214,12 +235,7 @@ public class MapBehaviors : MonoBehaviour
                 int index = x + y * width;
                 char currentChar = mapData[index];
 
-                // checking for assigned chars and replacing with assigned tiles
-                if (currentChar == ' ')
-                {
-                    myTilemap.SetTile(new Vector3Int(x, y, 0), _none);
-                    Debug.Log($"Set tile to _none at ({x}, {y})");
-                }
+                // checking for assigned chars and replacing with assigned tiles              
                 if (currentChar == '#')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _wall);
@@ -239,6 +255,11 @@ public class MapBehaviors : MonoBehaviour
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _enemy);
                     Debug.Log($"Set tile to _enemy at ({x}, {y})");
+                }
+                if (currentChar == ' ')
+                {
+                    myTilemap.SetTile(new Vector3Int(x, y, 0), _none);
+                    Debug.Log($"Set tile to _none at ({x}, {y})");
                 }
             }
         }
