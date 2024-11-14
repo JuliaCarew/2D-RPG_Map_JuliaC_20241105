@@ -27,11 +27,11 @@ public class MapBehaviors : MonoBehaviour
 
     // tile counters (to be used in TileRules & CheckNeighbors)
     [Header("Tile Count")]
-    public int wallCount;
-    public int doorCount;
-    public int chestCount;
-    public int enemyCount;
-    public int noneCount;
+    [SerializeField] private int wallCount = 0;
+    [SerializeField] private int doorCount = 0;
+    [SerializeField] private int chestCount = 0;
+    [SerializeField] private int enemyCount = 0;
+    [SerializeField] private int noneCount = 0;
 
     // positions of tiles (to be used in TileRules & CheckNeighbors)
     private List<Vector2Int> doorPositions = new List<Vector2Int>();
@@ -50,25 +50,10 @@ public class MapBehaviors : MonoBehaviour
 
     public List<string> Spawnables;
 
-    public void LoadMap()
+    // mapping each spawnable object to an integer (0-5) as a method
+    private Dictionary<string, int> GetTileMapping()
     {
-        myTilemap.ClearAllTiles();
-        LoadPremadeMap();
-    }
-    public void RefreshMap()
-    {
-        myTilemap.ClearAllTiles();
-        ConvertMapToTilemap();
-
-    }
-    // Returns a string representation of a randomly generated map
-    // USED IN: ConvertMapToTilemap()
-    string GenerateMapString()
-    {
-        Spawnables = new List<string> { wall, door, chest, enemy, none };
-
-        // mapping each spawnable object to an integer (0-5)
-        Dictionary<string, int> tileMapping = new Dictionary<string, int>
+        return new Dictionary<string, int>
         {
              { wall, 1 },
              { door, 2 },
@@ -76,58 +61,98 @@ public class MapBehaviors : MonoBehaviour
              { enemy, 4 },
              { none, 0 }
         };
+    }
+    // Initialize all tiles to empty
+    void InitializeMap()
+    {
+        var tileMapping = GetTileMapping();
+        for (int x = 0; x < myMap.GetLength(0); x++)
+        {
+            for (int y = 0; y < myMap.GetLength(1); y++)
+            {
+                myMap[x, y] = tileMapping[none];  
+            }
+        }
+    }
+    // Load Map Button
+    public void LoadMap()
+    {
+        myTilemap.ClearAllTiles();
+        LoadPremadeMap();
+    }
+    // Generate Map button
+    public void RefreshMap()
+    {      
+        myTilemap.ClearAllTiles();
+        InitializeMap();
+        ConvertMapToTilemap();
 
+        wallCount = 0;
+        doorCount = 0;
+        chestCount = 0;
+        enemyCount = 0;
+
+        Debug.Log($"Final " +
+         $"wall count: {wallCount}, " +
+         $"door count: {doorCount}, " +
+         $"chest count: {chestCount}, " +
+         $"enemy count: {enemyCount}");
+
+    }
+    // Returns a string representation of a randomly generated map
+    // USED IN: ConvertMapToTilemap()
+    string GenerateMapString()
+    {
+        Spawnables = new List<string> { wall, door, chest, enemy, none };
+        var tileMapping = GetTileMapping();
         // move check neighbors here and tile rles to their respective tiles ??
         string mapStringResult = " ";
 
         // Getting Random Positions
-        for (int y = 0; y < myMap.GetLength(0); y++)
+        for (int y = 0; y < myMap.GetLength(1); y++)
         {
-            for (int x = 0; x < myMap.GetLength(1); x++)
+            for (int x = 0; x < myMap.GetLength(0); x++)
             {
-                Debug.Log($"Current tile: ({x}, {y})");
-
-                // (0 - wall, 1 - door, 2 - chest, 3 - enemy, 4 - none)
                 int randomTileGen = Random.Range(0, 5);
                 myMap[x, y] = randomTileGen;
-
-                TileRules(x, y);
             }
-        }  
+        }
+
+        ApplyTileRules();
+
         // Placing the assigned chars in the map array
-        for (int y = 0; y < myMap.GetLength(0); y++)
+        for (int y = 0; y < myMap.GetLength(1); y++)
         {
-            for (int x = 0; x < myMap.GetLength(1); x++)
+            for (int x = 0; x < myMap.GetLength(0); x++)
             {
                 int tileType = myMap[x, y];
 
                 if (tileType == tileMapping[wall])
                 {
                     mapStringResult += "#";
-                    Debug.Log("generate wall");
+                    //Debug.Log("generate wall");
                 }
                 else if (tileType == tileMapping[door])
                 {
                     mapStringResult += "O";
-                    Debug.Log("generate door");
+                    //Debug.Log("generate door");
                 }
                 else if (tileType == tileMapping[chest])
                 {
                     mapStringResult += "*";
-                    Debug.Log("generate chest");
+                    //Debug.Log("generate chest");
                 }
                 else if (tileType == tileMapping[enemy])
                 {
                     mapStringResult += "@"; 
-                    Debug.Log("generate enemy");
+                    //Debug.Log("generate enemy");
                 }
                 else if (tileType == tileMapping[none])
                 {
                     mapStringResult += " ";
-                    Debug.Log("generate none");
+                    //Debug.Log("generate none");
                 }
             }
-            //mapStringResult += "\n";
         }
         return mapStringResult;
     }
@@ -160,133 +185,175 @@ public class MapBehaviors : MonoBehaviour
         }                                      
         return false;
     }
+    private void ApplyTileRules()
+    {
+        for (int y = 0; y < myMap.GetLength(1); y++)
+        {
+            for (int x = 0; x < myMap.GetLength(0); x++)
+            {
+                TileRules(x, y);
+            }
+        }
+    }
+    // !! TILE RULES !! //
     // Creates placement rules & maximum placements depending on the tile    
-    // USED IN: GenerateMapString()
     void TileRules(int x, int y)
     {
-        Dictionary<string, int> tileMapping = new Dictionary<string, int>
-        {
-             { wall, 1 },
-             { door, 2 },
-             { chest, 3 },
-             { enemy, 4 },
-             { none, 0 }
-        };
+        //Debug.Log($"Current tile: ({x}, {y})");
 
+        var tileMapping = GetTileMapping();
+        int tileType = myMap[x, y];
+
+        if (tileType == tileMapping[wall] || wallCount >= 10)
+        {
+            WallRules(x, y);
+        }
+        else if (tileType == tileMapping[door] || doorCount >= 2)
+        {
+            DoorRules(x, y);
+        }
+        else if (tileType == tileMapping[chest] || chestCount >= 3)
+        {
+            ChestRules(x, y);
+        }
+        else if (tileType == tileMapping[enemy] || enemyCount >= 5)
+        {
+            EnemyRules(x, y);
+        }
+        else
+        {
+            Debug.Log($"ERROR during TileRules at {x}, {y}");
+            return;
+        }
+    }
+    //  !!  WALLS   !! //
+    // Walls must be on the borders of the map array
+    void WallRules(int x, int y)
+    {
+        Debug.Log($"Running WallRules at ({x}, {y})");
+
+        var tileMapping = GetTileMapping();
         Vector2Int currentPos = new Vector2Int(x, y);
+        
+        //if (wallCount >= 60) return;
 
-        void WallRules(int x, int y)
+        if (x == 0 || x == myMap.GetLength(0) - 2 || y == 0 || y == myMap.GetLength(1) - 2)
         {
-            //  !!  WALLS   !! //
-            // Walls must be on the borders of the map array
-            if (wallCount >= 20) return;
-
-            if (x == 0 || x == myMap.GetLength(0) - 1 || y == 0 || y == myMap.GetLength(1) - 1)
+            // Wall is allowed on the border
+            if (myMap[x, y] != tileMapping[wall]) // Place wall if it doesn't already exist here
             {
-                // Wall is allowed on the border
-                if (myMap[x, y] != tileMapping[wall]) // Place wall if it doesn't already exist here
-                {
-                    myMap[x, y] = tileMapping[wall];
-                    wallPositions.Add(currentPos);
-                    wallCount++;
-                    Debug.Log($"Placed wall at border ({x}, {y}). Total walls: {wallCount}");
-                }
+                myMap[x, y] = tileMapping[wall];
+                wallPositions.Add(currentPos);
+                wallCount++;
+                Debug.Log($"Placed wall at border ({x}, {y})");
+            }
+        }
+        else
+        {
+            //return;
+            myMap[x, y] = tileMapping[none];
+            //Debug.Log($"Removed wall from non-border position ({x}, {y})");
+        }
+    }
+    //  !!  DOORS   !! //
+    // Doors always need to be within 1 tile of walls and there only one
+    void DoorRules(int x, int y)
+    {
+        Debug.Log($"Running DoorRules at ({x}, {y})");
+
+        var tileMapping = GetTileMapping();
+        Vector2Int currentPos = new Vector2Int(x, y);
+      
+        //if (doorCount >= 2) return;
+
+        if (myMap[x, y] == tileMapping[door])
+        {
+            bool nextToWall = CheckNeighbors(myMap, x, y, tileMapping[wall], 1); // 2 - distance
+
+            if (nextToWall)
+            {
+                doorCount++;
+                doorPositions.Add(currentPos);
+                Debug.Log($"Placed door at ({x}, {y})");
             }
             else
             {
-                myMap[x, y] = tileMapping[none];
-                Debug.Log($"Removed wall from non-border position ({x}, {y})");
-            }            
-        }
-
-        void DoorRules(int x, int y)
-        {
-            //  !!  DOORS   !! //
-            // Doors always need to be within 1 tile of walls and there only one
-            if (doorCount >= 2) return;
-
-            if (myMap[x, y] == tileMapping[door])
-            {
-                bool nextToWall = CheckNeighbors(myMap, x, y, tileMapping[wall], 1); // 1 - distance
-
-                if (nextToWall)
-                {
-                    doorCount++;
-                    doorPositions.Add(currentPos);
-                    Debug.Log($"Placed door at ({x}, {y}). Total doors: {doorCount}");
-                }
-                else
-                {
-                    myMap[x, y] = tileMapping[none];  // Place an empty space if rule not met
-                    Debug.Log($"ERROR - Replaced door with none at {x}, {y}");
-                }
+                //return;
+                myMap[x, y] = tileMapping[none];  // Place an empty space if rule not met
+                //Debug.Log($"ERROR - Replaced door with none at {x}, {y}");
             }
         }
-        void ChestRules(int x, int y)
-        {
-            //  !!  CHESTS   !! //
-            // Chests must be at least 2 tiles away from doors, and within 1 tile of a wall 
-            if (chestCount >= 3) return;
-
-            if (myMap[x, y] == tileMapping[chest])
-            {
-                bool nextToWall = CheckNeighbors(myMap, x, y, tileMapping[wall], 1);   // 1 - distance
-                bool farFromDoor = !CheckNeighbors(myMap, x, y, tileMapping[door], 2); // 2 - distance
-
-                if (nextToWall && farFromDoor)
-                {
-                    chestCount++;
-                    chestPositions.Add(currentPos);
-                    Debug.Log($"Placed chest at ({x}, {y}). Total chests: {chestCount}");
-                }
-                else
-                {
-                    myMap[x, y] = tileMapping[none];  // Place an empty space if rule not met
-                    Debug.Log($"ERROR - Replaced chest with none at {x}, {y}");
-                }
-            }
-        }
-        void EnemyRules(int x, int y)
-        {
-            //  !!  ENEMIES   !! //
-            // Enemies need to be 1 tile away from nearest occupied tile of any kind 
-            if (enemyCount >= 4) return;
-
-            if (myMap[x, y] == tileMapping[enemy])
-            {
-                bool farFromOccupied = !CheckNeighbors(myMap, x, y, tileMapping[wall], 1) && // 2 - distance
-                                       !CheckNeighbors(myMap, x, y, tileMapping[door], 1) && // 2 - distance
-                                       !CheckNeighbors(myMap, x, y, tileMapping[chest], 1) && //2 - distance
-                                       !CheckNeighbors(myMap, x, y, tileMapping[enemy], 1);   // 2 - distance
-                if (farFromOccupied)
-                {
-                    enemyCount++;
-                    enemyPositions.Add(currentPos);
-                    Debug.Log($"Placed enemy at ({x}, {y}). Total enemies: {enemyCount}");
-                }
-                else
-                {
-                    myMap[x, y] = tileMapping[none];  // Place an empty space if rule not met
-                    Debug.Log($"ERROR - Replaced enemy with none at {x}, {y}");
-                }
-            }
-        }
-
-        WallRules(x, y);   // Walls must be placed first and only on borders
-        DoorRules(x, y);   // Doors come next, near walls
-        ChestRules(x, y);  // Chests next, near walls but far from doors
-        EnemyRules(x, y);  // Enemies last, far from all other occupied tiles
     }
+    //  !!  CHESTS   !! //
+    // Chests must be at least 2 tiles away from doors, and within 1 tile of a wall 
+    void ChestRules(int x, int y)
+    {
+        Debug.Log($"Running ChestRules at ({x}, {y})");
 
+        var tileMapping = GetTileMapping();
+        Vector2Int currentPos = new Vector2Int(x, y);
+     
+        //if (chestCount >= 3) return;
+
+        if (myMap[x, y] == tileMapping[chest])
+        {
+            bool nextToWall = CheckNeighbors(myMap, x, y, tileMapping[wall], 1);   // 1 - distance
+            bool farFromDoor = !CheckNeighbors(myMap, x, y, tileMapping[door], 3); // 3 - distance
+
+            if (nextToWall && farFromDoor)
+            {
+                chestCount++;
+                chestPositions.Add(currentPos);
+                Debug.Log($"Placed chest at ({x}, {y})");
+            }
+            else
+            {
+                //return;
+                myMap[x, y] = tileMapping[none];  // Place an empty space if rule not met
+                //Debug.Log($"ERROR - Replaced chest with none at {x}, {y}");
+            }
+        }
+    }
+    //  !!  ENEMIES   !! //
+    // Enemies need to be 1 tile away from nearest occupied tile of any kind 
+    void EnemyRules(int x, int y)
+    {
+        Debug.Log($"Running EnemyRules at ({x}, {y})");
+
+        var tileMapping = GetTileMapping();
+        Vector2Int currentPos = new Vector2Int(x, y);
+       
+        //if (enemyCount >= 5) return;
+
+        if (myMap[x, y] == tileMapping[enemy])
+        {
+            bool farFromOccupied = !CheckNeighbors(myMap, x, y, tileMapping[wall], 2) && // 2 - distance
+                                   !CheckNeighbors(myMap, x, y, tileMapping[door], 2) && // 2 - distance
+                                   !CheckNeighbors(myMap, x, y, tileMapping[chest], 2) && //2 - distance
+                                   !CheckNeighbors(myMap, x, y, tileMapping[enemy], 2);   // 2 - distance
+            if (farFromOccupied)
+            {
+                enemyCount++;
+                enemyPositions.Add(currentPos);
+                Debug.Log($"Placed enemy at ({x}, {y})");
+            }
+            else
+            {
+                //return;
+                myMap[x, y] = tileMapping[none];  // Place an empty space if rule not met
+                //Debug.Log($"ERROR - Replaced enemy with none at {x}, {y}");
+            }
+        }
+    }
     // Converts a map string into Tilemap using assigned public variables with _
     // (taken from the GenerateMapString() method)
     string ConvertMapToTilemap()
     {
         string mapData = GenerateMapString();
 
-        for (int x = 0; x < myMap.GetLength(0); x++)
+        for (int x = 0; x < myMap.GetLength(1); x++)
         {
-            for (int y = 0; y < myMap.GetLength(1); y++)
+            for (int y = 0; y < myMap.GetLength(0); y++)
             {
                 //int index = x + (myMap.GetLength(1) - y - 1) * myMap.GetLength(0);
                 int index = x + y * myMap.GetLength(0);
@@ -296,27 +363,27 @@ public class MapBehaviors : MonoBehaviour
                 if (currentChar == '#')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _wall);
-                    Debug.Log($"Set tile to _wall at ({x}, {y})");
+                    //Debug.Log($"Set tile to _wall at ({x}, {y})");
                 }
                 if (currentChar == 'O')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _door);
-                    Debug.Log($"Set tile to _door at ({x}, {y})");
+                    //Debug.Log($"Set tile to _door at ({x}, {y})");
                 }
                 if (currentChar == '*')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _chest);
-                    Debug.Log($"Set tile to _chest at ({x}, {y})");
+                    //Debug.Log($"Set tile to _chest at ({x}, {y})");
                 }
                 if (currentChar == '@')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _enemy);
-                    Debug.Log($"Set tile to _enemy at ({x}, {y})");
+                    //Debug.Log($"Set tile to _enemy at ({x}, {y})");
                 }
                 if (currentChar == ' ')
                 {
                     myTilemap.SetTile(new Vector3Int(x, y, 0), _none);
-                    Debug.Log($"Set tile to _none at ({x}, {y})");
+                    //Debug.Log($"Set tile to _none at ({x}, {y})");
                 }
             }
         }
@@ -366,13 +433,3 @@ public class MapBehaviors : MonoBehaviour
         return ($"{myLines}");
     }
 }
-/*  FLOW
-    On START - only ConvertMapToTilemap() runs
-    In that process...
-    First GenerateMapString() runs
-        Where TileRules() is called
-    In TileRules(), 
-        CheckNeighbors() is called before implementing rules
-    The Map String is then taken and used in the ConvertMapToTilemap() method
-    Order is: CheckNeighnors() - TileRules() - GenerateMapString() - ConvertMapToTilemap()
-*/
