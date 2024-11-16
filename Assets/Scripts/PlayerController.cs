@@ -5,83 +5,100 @@ using UnityEngine.Tilemaps;
 
 public class PlayerController : MonoBehaviour
 {
+    public MapBehaviors MapBehaviors;
+
     public Tilemap myTilemap;
-    public float movementSpeed = 5f;
     public Transform movePoint;
     public float tileSize = 0.8f;
 
-    // Layer definitions for checking tiles
-    public TileBase wallTile;
-    public TileBase chestTile;
-    public TileBase enemyTile;
-    public TileBase borderTile; // For invisible borders around the screen
-
-    // Map boundaries 
-    public int minX = -1;
-    public int maxX = 16;
-    public int minY = -1;
-    public int maxY = 16;
+    // updating the player sprite
+    public TileBase playerTile;
+    private TileBase previousTile;
 
     void Start()
     {
-        movePoint.parent = null;
-        // Snap movePoint to nearest grid position
-        movePoint.position = new Vector3(
-            Mathf.Round(transform.position.x / tileSize) * tileSize,
-            Mathf.Round(transform.position.y / tileSize) * tileSize,
-            transform.position.z);
+        movePoint.parent = null;  // allows movepoint to dictate player's direction/ can be moved on it's own    
     }
     void Update()
     {
         MovePlayer();
     }
-    public void MovePlayer()
-    {    
-        // Move Player's sprite towards movePoint
-        transform.position = Vector3.MoveTowards
-            (transform.position, movePoint.position, movementSpeed * Time.deltaTime);
+    public bool CanMove(int x, int y)
+    {
+        // setting new variable to determine current position
+        var gridPosition = new Vector3Int(x, y, 0);
+        // checking tiles, needs to ref. MapBehaviors _tiles to collide correctly
+        TileBase wallTile = MapBehaviors._wall;
+        TileBase doorTile = MapBehaviors._door;
+        TileBase chestTile = MapBehaviors._chest;
+        TileBase enemyTile = MapBehaviors._enemy;
+        TileBase noneTile = MapBehaviors._none;    
 
-        if (Vector3.Distance(transform.position, movePoint.position) <= 0.05f)
+        // Get the tile at the specified grid position
+        TileBase tileAtPosition = myTilemap.GetTile(gridPosition);
+
+        // cannot move on wall, chest, door, or enemy tiles
+        if (tileAtPosition == wallTile ||
+            tileAtPosition == doorTile ||
+            tileAtPosition == chestTile ||
+            tileAtPosition == enemyTile)
         {
-            // Player has reached the movePoint, can issue next move command
-            if (Mathf.Abs(Input.GetAxisRaw("Horizontal")) == 1f)
-            {
-                // Move horizontally, snapping to the grid
-                movePoint.position += 
-                new Vector3(Input.GetAxisRaw("Horizontal") * tileSize, 0f, 0f);
-                //Debug.Log("moving horizontally");
-            }
-            if (Mathf.Abs(Input.GetAxisRaw("Vertical")) == 1f)
-            {
-                // Move vertically, snapping to the grid
-                movePoint.position += 
-                new Vector3(0f, Input.GetAxisRaw("Vertical") * tileSize, 0f);
-                //Debug.Log("moving vertically");
-            }
+            Debug.Log($"Cannot move on {tileAtPosition} at: {x}, {y}");
+            return false; 
+        }
+        // you can move on 'none' tiles
+        if (tileAtPosition == noneTile) {
+            Debug.Log($"CAN move on {tileAtPosition} at: {x}, {y}");
+            return true;
+        }
+        return false; 
+    }
+    public void MovePlayer()
+    {
+        // set player's current pos using movePoint & tileSize
+        int playerX = Mathf.RoundToInt(movePoint.position.x / tileSize);
+        int playerY = Mathf.RoundToInt(movePoint.position.y / tileSize);
+        // moving on X, Y
+        float horizontal = Input.GetAxisRaw("Horizontal");
+        float vertical = Input.GetAxisRaw("Vertical");
+
+        // can only move vertically/ horizontally, not diagonally
+        if (horizontal != 0) {
+            vertical = 0;
+        }
+        // increment target based on player pos
+        int targetX = playerX;
+        int targetY = playerY;
+
+        if (horizontal > 0) targetX += 1; // move RIGHT
+        else if (horizontal < 0) targetX -= 1; // move LEFT
+
+        if (vertical > 0) targetY += 1; // move UP
+        else if (vertical < 0) targetY -= 1; // move DOWN
+
+        // Check if the target tile is walkable
+        if (CanMove(targetX, targetY))
+        {   // stores previous pos as player pos
+            int previousX = playerX;
+            int previousY = playerY;
+
+            // Update the move point's position using targetX,Y var previously selected
+            movePoint.position = new Vector3(targetX * tileSize, targetY * tileSize, movePoint.position.z);
+
+            // Draw the player at the new position
+            DrawPlayer(previousX, previousY, targetX, targetY);
         }
     }
-
-    // Function to check if the player can move to the target position
-    public bool CanMoveTo(Vector3 targetPosition)
+    public void DrawPlayer(int previousX, int previousY, int currentX, int currentY)
     {
-        // Convert world position to grid (cell) position
-        Vector3Int cellPosition = myTilemap.WorldToCell(targetPosition);
-        TileBase tileAtTarget = myTilemap.GetTile(cellPosition);
-
-        // Check if the position is outside the map boundaries
-        if (cellPosition.x < minX || cellPosition.x > maxX || cellPosition.y < minY || cellPosition.y > maxY)
+        TileBase noneTile = MapBehaviors._none;
+        // Replace the previous tile with none
+        if (myTilemap.HasTile(new Vector3Int(previousX, previousY, 0)))
         {
-            return false;  // Prevent moving beyond the screen border
+            myTilemap.SetTile(new Vector3Int(previousX, previousY, 0), noneTile);
         }
 
-        // Check if there's a wall, chest, or enemy tile
-        if (tileAtTarget == wallTile || tileAtTarget == chestTile || tileAtTarget == enemyTile || tileAtTarget == borderTile)
-        {
-            Debug.Log($"Collision detected at {cellPosition} with {tileAtTarget}");
-            return false;  // Prevent moving into a blocked tile
-        }
-
-        // If no collision, return true to allow movement
-        return true;
+        // Place the player tile at the new position
+        myTilemap.SetTile(new Vector3Int(currentX, currentY, 0), playerTile);
     }
 }
